@@ -17,6 +17,7 @@ graph LR
 ## Prerequisites
 
 - **Python**: 3.12 or higher.
+- **uv**: Recommended for dependency management.
 - **Docker**: To run the Neo4j instance.
 - **Databricks CLI**: Configured with a profile that has access to Unity Catalog and Statement Execution.
 
@@ -46,18 +47,27 @@ Access the Neo4j Browser at [http://localhost:7474](http://localhost:7474) (Logi
 
 ### 3. Install Dependencies
 
-It is recommended to use `uv` or `pip` to install the required packages:
+Using `uv` is the recommended way to manage dependencies:
 
 ```bash
-pip install -r pyproject.toml
-# OR if using uv
+# Install dependencies and create a virtual environment
 uv sync
+```
+
+*Alternatively, using standard pip:*
+```bash
+pip install .
 ```
 
 ## Usage
 
-Run the ingestion script:
+Run the ingestion script using `uv`:
 
+```bash
+uv run ingest_lineage.py
+```
+
+*Alternatively, using the virtual environment directly:*
 ```bash
 python ingest_lineage.py
 ```
