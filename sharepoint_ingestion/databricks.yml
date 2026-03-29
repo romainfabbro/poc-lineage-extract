@@ -1,0 +1,18 @@
+bundle:
+  name: sharepoint_ingestion
+
+workspace:
+  host: https://{workspace}.azuredatabricks.net
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+
+  prod:
+    mode: production
+    workspace:
+      host: https://{workspace-prod}.azuredatabricks.net
