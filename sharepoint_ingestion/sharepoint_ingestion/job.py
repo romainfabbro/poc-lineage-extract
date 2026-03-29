@@ -10,18 +10,29 @@ from sharepoint_ingestion.graph import (
 )
 from sharepoint_ingestion.storage import read_token, write_file, write_token
 
+_REQUIRED_PARAMS = ("drive_id", "state_table", "raw_base_path", "library_name")
+
+
+def _validate_params(params: dict) -> None:
+    for key in _REQUIRED_PARAMS:
+        if not params.get(key):
+            raise ValueError(f"Missing required job parameter: '{key}'")
+
 
 def run(spark, params: dict, secrets: dict) -> None:
-    """
-    Full pipeline:
-    1. Read token from state table
-    2. Fetch delta changes from Graph API
-    3. Download and write each file to raw layer
-    4. Commit new token on success
+    """Full pipeline: read token → fetch changes → write files → commit token.
 
     Raises on any unrecoverable error — does NOT commit token on partial failure.
     On 410 (token expired), resets the stored token to NULL and raises.
+
+    Partial-failure note: if a file download raises mid-loop, files already
+    written in this run are persisted at their deterministic paths
+    ({file_id}_{file_name}). The next run replays from the same delta token
+    and overwrites them idempotently. This relies on the path template staying
+    stable — any change to the naming scheme would break this guarantee.
     """
+    _validate_params(params)
+
     drive_id: str = params["drive_id"]
     state_table: str = params["state_table"]
     raw_base_path: str = params["raw_base_path"]

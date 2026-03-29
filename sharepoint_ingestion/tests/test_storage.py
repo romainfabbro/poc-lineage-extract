@@ -2,9 +2,12 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from sharepoint_ingestion.storage import read_token, write_file, write_token
 
 DRIVE_ID = "drive-001"
+BAD_DRIVE_ID = "drive'; DROP TABLE sp_delta_token; --"
 TABLE = "catalog.schema.sp_delta_token"
 DELTA_LINK = "https://graph.microsoft.com/delta?token=abc"
 
@@ -33,6 +36,11 @@ class TestReadToken:
 
         assert result == DELTA_LINK
 
+    def test_raises_on_invalid_drive_id(self):
+        spark = MagicMock()
+        with pytest.raises(ValueError, match="Invalid drive_id format"):
+            read_token(spark, TABLE, BAD_DRIVE_ID)
+
 
 # ── write_token ───────────────────────────────────────────────
 
@@ -52,11 +60,27 @@ class TestWriteToken:
         assert row_data[0]["delta_link"] == DELTA_LINK
         assert row_data[0]["last_status"] == "success"
 
-        mock_df.write.format.return_value.mode.return_value.option.return_value.saveAsTable.assert_called_once_with(
-            TABLE
+        (
+            mock_df.write.format.return_value.mode.return_value.option.return_value.saveAsTable.assert_called_once_with(
+                TABLE
+            )
         )
         call_chain = mock_df.write.format.return_value.mode.return_value.option
         call_chain.assert_called_once_with("replaceWhere", f"drive_id = '{DRIVE_ID}'")
+
+    def test_accepts_none_delta_link(self):
+        spark = MagicMock()
+        spark.createDataFrame.return_value = MagicMock()
+
+        write_token(spark, TABLE, DRIVE_ID, None, "failed")
+
+        args, _ = spark.createDataFrame.call_args
+        assert args[0][0]["delta_link"] is None
+
+    def test_raises_on_invalid_drive_id(self):
+        spark = MagicMock()
+        with pytest.raises(ValueError, match="Invalid drive_id format"):
+            write_token(spark, TABLE, BAD_DRIVE_ID, DELTA_LINK, "success")
 
 
 # ── write_file ────────────────────────────────────────────────
@@ -67,7 +91,7 @@ class TestWriteFile:
         content = b"hello bytes"
 
         with patch("sharepoint_ingestion.storage.datetime") as mock_dt:
-            mock_dt.utcnow.return_value.strftime.side_effect = lambda fmt: {
+            mock_dt.now.return_value.strftime.side_effect = lambda fmt: {
                 "%Y": "2024",
                 "%m": "03",
                 "%d": "15",
@@ -83,7 +107,7 @@ class TestWriteFile:
 
     def test_returns_full_path(self, tmp_path):
         with patch("sharepoint_ingestion.storage.datetime") as mock_dt:
-            mock_dt.utcnow.return_value.strftime.side_effect = lambda fmt: {
+            mock_dt.now.return_value.strftime.side_effect = lambda fmt: {
                 "%Y": "2024",
                 "%m": "01",
                 "%d": "01",
@@ -96,7 +120,7 @@ class TestWriteFile:
         content = b"actual content"
 
         with patch("sharepoint_ingestion.storage.datetime") as mock_dt:
-            mock_dt.utcnow.return_value.strftime.side_effect = lambda fmt: {
+            mock_dt.now.return_value.strftime.side_effect = lambda fmt: {
                 "%Y": "2024",
                 "%m": "06",
                 "%d": "20",
@@ -105,3 +129,13 @@ class TestWriteFile:
 
         written = tmp_path / "lib" / "2024" / "06" / "20" / "ID2_data.csv"
         assert written.read_bytes() == content
+
+    def test_raises_on_non_posix_path(self, tmp_path):
+        with pytest.raises(ValueError, match="absolute POSIX path"):
+            write_file(
+                "abfss://container@account.dfs.core.windows.net",
+                "lib",
+                "ID1",
+                "file.csv",
+                b"data",
+            )

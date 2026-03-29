@@ -1,6 +1,8 @@
 bundle:
   name: sharepoint_ingestion
 
+# Replace {workspace} with your Databricks workspace host, e.g.:
+#   https://adb-1234567890123456.7.azuredatabricks.net
 workspace:
   host: https://{workspace}.azuredatabricks.net
 
@@ -15,4 +17,5 @@ targets:
   prod:
     mode: production
     workspace:
+      # Replace {workspace-prod} with your production workspace host
       host: https://{workspace-prod}.azuredatabricks.net

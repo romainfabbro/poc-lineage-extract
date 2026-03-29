@@ -24,8 +24,10 @@ resources:
           job_cluster_key: ingestion_cluster
           python_wheel_task:
             package_name: sharepoint_ingestion
-            entry_point: run
+            entry_point: ingest                   # sharepoint_ingestion.entrypoint:main
           libraries:
+            # Build the wheel with: uv build
+            # Upload dist/sharepoint_ingestion-*.whl to the workspace before deploying
             - whl: dist/sharepoint_ingestion-*.whl
 
       parameters:
@@ -38,12 +40,13 @@ resources:
         - name: folder_item_id
           default: ""                             # empty = full library
         - name: raw_base_path
-          default: ""
+          default: ""                             # must be a /Volumes/... path
         - name: library_name
           default: ""
         - name: file_ext_filter
           default: ""                             # empty = all files
         - name: state_table
+          # Replace {catalog} and {schema} — run setup/sp_delta_token.sql first
           default: "{catalog}.{schema}.sp_delta_token"
 
       health:
@@ -54,4 +57,5 @@ resources:
 
       email_notifications:
         on_failure:
+          # Replace with your real alert address before deploying to production
           - data-platform-alerts@my-company.com

@@ -1,7 +1,5 @@
 """Tests for job.py — run() orchestration."""
 
-from unittest.mock import MagicMock
-
 import pytest
 
 from sharepoint_ingestion.graph import TokenExpiredError
@@ -33,11 +31,6 @@ FILE_ITEM = {
     "file": {},
     "@microsoft.graph.downloadUrl": "https://dl.example.com/report.xlsx",
 }
-
-
-@pytest.fixture()
-def spark():
-    return MagicMock()
 
 
 class TestRunHappyPath:
@@ -93,8 +86,6 @@ class TestRunHappyPath:
 
         run(spark, PARAMS, SECRETS)
 
-        _, kwargs_or_args = mock_fetch.call_args
-        # fetch_delta_changes called with file_ext_filter as list
         assert mock_fetch.call_args[0][4] == [".xlsx", ".csv"]
 
     def test_no_extension_filter_passes_none(self, spark, mocker):
@@ -124,6 +115,17 @@ class TestRunHappyPath:
         run(spark, params, SECRETS)
 
         assert mock_fetch.call_args[0][2] is None
+
+
+class TestRunParamValidation:
+    @pytest.mark.parametrize(
+        "missing_key",
+        ["drive_id", "state_table", "raw_base_path", "library_name"],
+    )
+    def test_raises_on_missing_required_param(self, spark, missing_key):
+        params = {**PARAMS, missing_key: ""}
+        with pytest.raises(ValueError, match=f"'{missing_key}'"):
+            run(spark, params, SECRETS)
 
 
 class TestRunErrorHandling:

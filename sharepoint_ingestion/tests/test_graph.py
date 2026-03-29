@@ -223,6 +223,16 @@ class TestFetchDeltaChanges:
         with pytest.raises(Exception, match="401 Unauthorized"):
             fetch_delta_changes(TOKEN, DRIVE_ID, FOLDER_ITEM_ID, None, None)
 
+    def test_raises_if_delta_link_missing_from_response(self, mocker):
+        # Response has neither deltaLink nor nextLink — malformed final page
+        resp = {"value": []}
+        mock_get = mocker.patch("sharepoint_ingestion.graph.requests.get")
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = resp
+
+        with pytest.raises(RuntimeError, match="deltaLink"):
+            fetch_delta_changes(TOKEN, DRIVE_ID, FOLDER_ITEM_ID, None, None)
+
 
 # ── download_file ─────────────────────────────────────────────
 

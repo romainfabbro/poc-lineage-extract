@@ -12,7 +12,9 @@ dependencies = [
 ]
 
 [project.scripts]
+# 'run' kept for backward-compat; 'ingest' is the production Databricks entry point
 run = "sharepoint_ingestion.job:run"
+ingest = "sharepoint_ingestion.entrypoint:main"
 
 [tool.setuptools.packages.find]
 include = ["sharepoint_ingestion*"]
@@ -35,6 +37,7 @@ addopts = "--cov=sharepoint_ingestion --cov-report=term-missing --cov-fail-under
 [tool.coverage.run]
 source = ["sharepoint_ingestion"]
 branch = true
+omit = ["sharepoint_ingestion/entrypoint.py"]  # Databricks-only; untestable without runtime
 
 [tool.coverage.report]
 fail_under = 100

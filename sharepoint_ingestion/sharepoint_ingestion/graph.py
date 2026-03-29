@@ -56,6 +56,12 @@ def fetch_delta_changes(
         else:
             url = data.get("@odata.nextLink")
 
+    if not new_delta_link:
+        raise RuntimeError(
+            "Graph API response did not contain '@odata.deltaLink' on the final page. "
+            "The response may be malformed."
+        )
+
     return collected, new_delta_link
 
 
