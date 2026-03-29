@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import os
 from datetime import datetime
+from pathlib import Path
 
 
 def read_token(spark, table: str, drive_id: str) -> str | None:
@@ -51,8 +51,7 @@ def write_file(
     yyyy = now.strftime("%Y")
     mm = now.strftime("%m")
     dd = now.strftime("%d")
-    path = os.path.join(base_path, library_name, yyyy, mm, dd, f"{file_id}_{file_name}")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "wb") as fh:
-        fh.write(content)
-    return path
+    path = Path(base_path) / library_name / yyyy / mm / dd / f"{file_id}_{file_name}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    return str(path)

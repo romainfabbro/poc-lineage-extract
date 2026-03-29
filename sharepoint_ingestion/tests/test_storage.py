@@ -64,7 +64,6 @@ class TestWriteToken:
 
 class TestWriteFile:
     def test_writes_to_correct_path(self, tmp_path):
-        base = str(tmp_path)
         content = b"hello bytes"
 
         with patch("sharepoint_ingestion.storage.datetime") as mock_dt:
@@ -73,26 +72,27 @@ class TestWriteFile:
                 "%m": "03",
                 "%d": "15",
             }[fmt]
-            path = write_file(base, "finance", "FILEID01", "report.xlsx", content)
+            path = write_file(
+                str(tmp_path), "finance", "FILEID01", "report.xlsx", content
+            )
 
-        expected = f"{base}/finance/2024/03/15/FILEID01_report.xlsx"
+        expected = str(
+            tmp_path / "finance" / "2024" / "03" / "15" / "FILEID01_report.xlsx"
+        )
         assert path == expected
 
     def test_returns_full_path(self, tmp_path):
-        base = str(tmp_path)
-
         with patch("sharepoint_ingestion.storage.datetime") as mock_dt:
             mock_dt.utcnow.return_value.strftime.side_effect = lambda fmt: {
                 "%Y": "2024",
                 "%m": "01",
                 "%d": "01",
             }[fmt]
-            result = write_file(base, "lib", "ID1", "file.csv", b"data")
+            result = write_file(str(tmp_path), "lib", "ID1", "file.csv", b"data")
 
-        assert result == f"{base}/lib/2024/01/01/ID1_file.csv"
+        assert result == str(tmp_path / "lib" / "2024" / "01" / "01" / "ID1_file.csv")
 
     def test_file_content_is_written(self, tmp_path):
-        base = str(tmp_path)
         content = b"actual content"
 
         with patch("sharepoint_ingestion.storage.datetime") as mock_dt:
@@ -101,7 +101,7 @@ class TestWriteFile:
                 "%m": "06",
                 "%d": "20",
             }[fmt]
-            path = write_file(base, "lib", "ID2", "data.csv", content)
+            write_file(str(tmp_path), "lib", "ID2", "data.csv", content)
 
-        with open(path, "rb") as f:
-            assert f.read() == content
+        written = tmp_path / "lib" / "2024" / "06" / "20" / "ID2_data.csv"
+        assert written.read_bytes() == content
