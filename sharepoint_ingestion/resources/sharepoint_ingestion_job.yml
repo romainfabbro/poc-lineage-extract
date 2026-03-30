@@ -1,0 +1,61 @@
+resources:
+  jobs:
+    sharepoint_ingestion:
+      name: sharepoint_file_ingestion
+
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: UTC
+        pause_status: UNPAUSED
+
+      job_clusters:
+        - job_cluster_key: ingestion_cluster
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 0                        # single-node
+            spark_conf:
+              spark.master: local[*, 4]
+            azure_attributes:
+              availability: ON_DEMAND_AZURE
+
+      tasks:
+        - task_key: ingest
+          job_cluster_key: ingestion_cluster
+          python_wheel_task:
+            package_name: sharepoint_ingestion
+            entry_point: ingest                   # sharepoint_ingestion.entrypoint:main
+          libraries:
+            # Build the wheel with: uv build
+            # Upload dist/sharepoint_ingestion-*.whl to the workspace before deploying
+            - whl: dist/sharepoint_ingestion-*.whl
+
+      parameters:
+        - name: tenant_domain
+          default: ""
+        - name: site_id
+          default: ""
+        - name: drive_id
+          default: ""
+        - name: folder_item_id
+          default: ""                             # empty = full library
+        - name: raw_base_path
+          default: ""                             # must be a /Volumes/... path
+        - name: library_name
+          default: ""
+        - name: file_ext_filter
+          default: ""                             # empty = all files
+        - name: state_table
+          # Replace {catalog} and {schema} — run setup/sp_delta_token.sql first
+          default: "{catalog}.{schema}.sp_delta_token"
+
+      health:
+        rules:
+          - metric: RUN_DURATION_SECONDS
+            op: GREATER_THAN
+            value: 1800                           # alert if > 30 min
+
+      email_notifications:
+        on_failure:
+          # Replace with your real alert address before deploying to production
+          - data-platform-alerts@my-company.com
