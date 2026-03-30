@@ -51,6 +51,18 @@ def run(spark, params: dict, secrets: dict) -> None:
         secrets["spn-client-secret"],
     )
 
+    # For cloud URIs (abfss://...) authenticate with the same SPN used for
+    # SharePoint.  For POSIX paths (UC Volumes) no credentials are needed.
+    storage_options: dict | None = (
+        {
+            "tenant_id": secrets["spn-tenant-id"],
+            "client_id": secrets["spn-client-id"],
+            "client_secret": secrets["spn-client-secret"],
+        }
+        if "://" in raw_base_path
+        else None
+    )
+
     delta_link = read_token(spark, state_table, drive_id)
 
     try:
@@ -67,6 +79,13 @@ def run(spark, params: dict, secrets: dict) -> None:
 
     for item in items:
         content = download_file(item["@microsoft.graph.downloadUrl"])
-        write_file(raw_base_path, library_name, item["id"], item["name"], content)
+        write_file(
+            raw_base_path,
+            library_name,
+            item["id"],
+            item["name"],
+            content,
+            storage_options,
+        )
 
     write_token(spark, state_table, drive_id, new_delta_link, "success")

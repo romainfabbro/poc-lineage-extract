@@ -6,6 +6,8 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+import fsspec
+
 # Graph API drive IDs are URL-safe base64 strings with an optional '!' prefix
 # (e.g. "b!xYz123-abc_def"). Reject anything containing SQL special characters.
 _DRIVE_ID_RE = re.compile(r"^[A-Za-z0-9!._,\-]{1,512}$")
@@ -59,24 +61,56 @@ def write_file(
     file_id: str,
     file_name: str,
     content: bytes,
+    storage_options: dict | None = None,
 ) -> str:
-    """Write bytes to a UC Volume path and return the full path written.
+    """Write bytes to the raw layer and return the full path written.
 
-    base_path must be an absolute POSIX path, e.g. /Volumes/catalog/schema/volume.
-    UC Volumes are mounted as POSIX paths on Databricks clusters and support
-    standard Python file I/O. Cloud URI schemes (abfss://, s3://, dbfs:/) are
-    not supported — use a UC Volume mount instead.
+    Two backends are supported based on the base_path scheme:
+
+    - UC Volume (POSIX path, e.g. ``/Volumes/catalog/schema/volume``):
+      Written via standard Python file I/O using pathlib. ``storage_options``
+      is ignored.  UC Volumes are mounted as POSIX paths on Databricks clusters.
+
+    - Azure Data Lake Storage Gen2 (``abfss://container@account.dfs.core.windows.net``):
+      Written via ``fsspec`` + ``adlfs``.  Pass ``storage_options`` with service
+      principal credentials::
+
+          storage_options = {
+              "tenant_id": "...",
+              "client_id": "...",
+              "client_secret": "...",
+          }
+
+      Install the optional extra to enable ADLS support:
+      ``pip install sharepoint_ingestion[adls]``
+
+    Any other base_path format raises ``ValueError``.
     """
-    if not base_path.startswith("/"):
-        raise ValueError(
-            "base_path must be an absolute POSIX path "
-            f"(e.g. /Volumes/catalog/schema/volume), got: {base_path!r}"
-        )
     now = datetime.now(timezone.utc)
     yyyy = now.strftime("%Y")
     mm = now.strftime("%m")
     dd = now.strftime("%d")
-    path = Path(base_path) / library_name / yyyy / mm / dd / f"{file_id}_{file_name}"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
-    return str(path)
+    file_segment = f"{file_id}_{file_name}"
+
+    if "://" in base_path:
+        # Cloud path — delegate to fsspec (adlfs for abfss://, etc.)
+        path = "/".join(
+            [base_path.rstrip("/"), library_name, yyyy, mm, dd, file_segment]
+        )
+        with fsspec.open(path, "wb", **(storage_options or {})) as fh:
+            fh.write(content)
+    elif base_path.startswith("/"):
+        # POSIX path — UC Volume or local filesystem
+        p = Path(base_path) / library_name / yyyy / mm / dd / file_segment
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(content)
+        path = str(p)
+    else:
+        raise ValueError(
+            "base_path must be an absolute POSIX path "
+            "(e.g. /Volumes/catalog/schema/volume) "
+            "or a cloud URI (e.g. abfss://container@account.dfs.core.windows.net), "
+            f"got: {base_path!r}"
+        )
+
+    return path

@@ -50,7 +50,7 @@ class TestRunHappyPath:
         run(spark, PARAMS, SECRETS)
 
         mock_write_file.assert_called_once_with(
-            "/mnt/raw", "finance", "FILEID01", "report.xlsx", b"bytes"
+            "/mnt/raw", "finance", "FILEID01", "report.xlsx", b"bytes", None
         )
         mock_write_token.assert_called_once_with(
             spark,
@@ -101,6 +101,34 @@ class TestRunHappyPath:
         run(spark, params, SECRETS)
 
         assert mock_fetch.call_args[0][4] is None
+
+    def test_cloud_path_passes_storage_options_from_secrets(self, spark, mocker):
+        adls_base = "abfss://container@account.dfs.core.windows.net"
+        params = {**PARAMS, "raw_base_path": adls_base}
+        mocker.patch("sharepoint_ingestion.job.get_access_token", return_value="tok")
+        mocker.patch("sharepoint_ingestion.job.read_token", return_value=None)
+        mocker.patch(
+            "sharepoint_ingestion.job.fetch_delta_changes",
+            return_value=([FILE_ITEM], DELTA_LINK),
+        )
+        mocker.patch("sharepoint_ingestion.job.download_file", return_value=b"bytes")
+        mock_write_file = mocker.patch("sharepoint_ingestion.job.write_file")
+        mocker.patch("sharepoint_ingestion.job.write_token")
+
+        run(spark, params, SECRETS)
+
+        mock_write_file.assert_called_once_with(
+            adls_base,
+            "finance",
+            "FILEID01",
+            "report.xlsx",
+            b"bytes",
+            {
+                "tenant_id": "tenant-id",
+                "client_id": "client-id",
+                "client_secret": "client-secret",
+            },
+        )
 
     def test_no_folder_item_passes_none(self, spark, mocker):
         params = {**PARAMS, "folder_item_id": ""}
