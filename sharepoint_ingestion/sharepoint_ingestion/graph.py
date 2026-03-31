@@ -5,9 +5,11 @@ from __future__ import annotations
 import time
 
 import requests
+from loguru import logger
 
 _GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 _MAX_RETRIES = 3
+_MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB limit for POSIX/cp pattern
 
 
 class TokenExpiredError(Exception):
@@ -46,13 +48,23 @@ def fetch_delta_changes(
                 continue
             if "file" not in item:
                 continue
+
+            # Apply file size limit (100MB)
+            size = item.get("size", 0)
+            if size > _MAX_FILE_SIZE_BYTES:
+                logger.warning(
+                    f"Skipping file '{item.get('name')}' (ID: {item['id']}) "
+                    f"because its size ({size / 1024 / 1024:.1f} MB) exceeds "
+                    f"the {_MAX_FILE_SIZE_BYTES / 1024 / 1024:.0f} MB limit."
+                )
+                continue
+
             if file_ext_filter is not None:
                 name: str = item.get("name", "")
                 ext = "." + name.rsplit(".", 1)[-1] if "." in name else ""
                 if ext.lower() not in file_ext_filter:
                     continue
 
-            
             item["download_url"] = (
                 f"{_GRAPH_BASE}/drives/{drive_id}/items/{item['id']}/content"
             )
@@ -73,9 +85,10 @@ def fetch_delta_changes(
     return collected, new_delta_link
 
 
-def download_file(download_url: str) -> bytes:
-    """Download a file from a pre-authenticated Graph API URL and return its bytes."""
-    response = requests.get(download_url, timeout=60)
+def download_file(download_url: str, access_token: str) -> bytes:
+    """Download a file from the Graph API URL and return its bytes."""
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(download_url, headers=headers, timeout=60)
     response.raise_for_status()
     return response.content
 

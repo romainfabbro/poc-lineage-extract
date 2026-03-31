@@ -123,6 +123,20 @@ class TestFetchDeltaChanges:
 
         assert items == [xlsx, csv]
 
+    def test_file_size_limit_skips_large_files(self, mocker):
+        small = make_file_item("small.xlsx", "id1")
+        small["size"] = 10 * 1024 * 1024
+        large = make_file_item("large.zip", "id2")
+        large["size"] = 200 * 1024 * 1024  # Over 100MB
+        resp = make_response([small, large], delta_link=DELTA_LINK)
+        mock_get = mocker.patch("sharepoint_ingestion.graph.requests.get")
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = resp
+
+        items, _ = fetch_delta_changes(TOKEN, DRIVE_ID, None, None, None)
+
+        assert items == [small]
+
     def test_extension_filter_none_includes_all(self, mocker):
         xlsx = make_file_item("report.xlsx", "id1")
         pdf = make_file_item("scan.pdf", "id2")
@@ -242,11 +256,18 @@ class TestDownloadFile:
         mock_resp = mocker.MagicMock()
         mock_resp.status_code = 200
         mock_resp.content = b"file-bytes"
-        mocker.patch("sharepoint_ingestion.graph.requests.get", return_value=mock_resp)
+        mock_get = mocker.patch(
+            "sharepoint_ingestion.graph.requests.get", return_value=mock_resp
+        )
 
-        result = download_file("https://dl.example.com/file")
+        result = download_file("https://dl.example.com/file", TOKEN)
 
         assert result == b"file-bytes"
+        mock_get.assert_called_once_with(
+            "https://dl.example.com/file",
+            headers={"Authorization": f"Bearer {TOKEN}"},
+            timeout=60,
+        )
 
     def test_raises_on_non_200(self, mocker):
         mock_resp = mocker.MagicMock()
@@ -255,4 +276,4 @@ class TestDownloadFile:
         mocker.patch("sharepoint_ingestion.graph.requests.get", return_value=mock_resp)
 
         with pytest.raises(Exception, match="403 Forbidden"):
-            download_file("https://dl.example.com/file")
+            download_file("https://dl.example.com/file", TOKEN)

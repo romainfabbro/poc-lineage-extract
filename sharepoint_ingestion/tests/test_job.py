@@ -6,8 +6,6 @@ from sharepoint_ingestion.graph import TokenExpiredError
 from sharepoint_ingestion.job import run
 
 PARAMS = {
-    "tenant_domain": "company.sharepoint.com",
-    "site_id": "company.sharepoint.com,abc,def",
     "drive_id": "drive-001",
     "folder_item_id": "folder-001",
     "raw_base_path": "/mnt/raw",
@@ -41,7 +39,9 @@ class TestRunHappyPath:
             "sharepoint_ingestion.job.fetch_delta_changes",
             return_value=([FILE_ITEM], DELTA_LINK),
         )
-        mocker.patch("sharepoint_ingestion.job.download_file", return_value=b"bytes")
+        mock_download = mocker.patch(
+            "sharepoint_ingestion.job.download_file", return_value=b"bytes"
+        )
         mock_write_file = mocker.patch(
             "sharepoint_ingestion.job.write_file", return_value="/mnt/raw/file"
         )
@@ -49,6 +49,7 @@ class TestRunHappyPath:
 
         run(spark, PARAMS, SECRETS)
 
+        mock_download.assert_called_once_with(FILE_ITEM["download_url"], "tok")
         mock_write_file.assert_called_once_with(
             "/mnt/raw", "finance", "FILEID01", "report.xlsx", b"bytes", dbutils=None
         )
@@ -76,6 +77,7 @@ class TestRunHappyPath:
         mock_write_token.assert_called_once()
 
     def test_extension_filter_parsed_correctly(self, spark, mocker):
+        params = {**PARAMS, "file_ext_filter": ".XLSX, .csv"}
         mocker.patch("sharepoint_ingestion.job.get_access_token", return_value="tok")
         mocker.patch("sharepoint_ingestion.job.read_token", return_value=None)
         mock_fetch = mocker.patch(
@@ -84,7 +86,7 @@ class TestRunHappyPath:
         )
         mocker.patch("sharepoint_ingestion.job.write_token")
 
-        run(spark, PARAMS, SECRETS)
+        run(spark, params, SECRETS)
 
         assert mock_fetch.call_args[0][4] == [".xlsx", ".csv"]
 

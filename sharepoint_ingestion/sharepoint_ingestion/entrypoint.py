@@ -21,8 +21,6 @@ def main() -> None:  # pragma: no cover
     dbutils = DBUtils(spark)
 
     params = {
-        "tenant_domain": dbutils.widgets.get("tenant_domain"),
-        "site_id": dbutils.widgets.get("site_id"),
         "drive_id": dbutils.widgets.get("drive_id"),
         "folder_item_id": dbutils.widgets.get("folder_item_id"),
         "raw_base_path": dbutils.widgets.get("raw_base_path"),
@@ -38,4 +36,4 @@ def main() -> None:  # pragma: no cover
         "spn-client-secret": dbutils.secrets.get(secret_scope, "spn-client-secret"),
     }
 
-    run(spark, params, secrets)
+    run(spark, params, secrets, dbutils=dbutils)

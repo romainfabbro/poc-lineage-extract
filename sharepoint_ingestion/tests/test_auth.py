@@ -6,6 +6,15 @@ from sharepoint_ingestion.auth import get_access_token
 
 
 class TestGetAccessToken:
+    def test_returns_env_token_if_set(self, mocker):
+        mocker.patch("sharepoint_ingestion.auth.os.getenv", return_value="env-tok-123")
+        mock_msal = mocker.patch("sharepoint_ingestion.auth.msal.ConfidentialClientApplication")
+
+        token = get_access_token("tid", "cid", "sec")
+
+        assert token == "env-tok-123"
+        mock_msal.assert_not_called()
+
     def test_returns_token_on_success(self, mocker):
         mock_app = mocker.MagicMock()
         mock_app.acquire_token_for_client.return_value = {"access_token": "tok123"}

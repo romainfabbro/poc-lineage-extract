@@ -10,6 +10,7 @@ dependencies = [
     "msal>=1.28",
     "requests>=2.31",
     "fsspec>=2023.6",
+    "loguru>=0.7",
 ]
 
 [project.optional-dependencies]

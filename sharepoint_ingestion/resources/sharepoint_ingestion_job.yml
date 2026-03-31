@@ -31,10 +31,6 @@ resources:
             - whl: dist/sharepoint_ingestion-*.whl
 
       parameters:
-        - name: tenant_domain
-          default: ""
-        - name: site_id
-          default: ""
         - name: drive_id
           default: ""
         - name: folder_item_id

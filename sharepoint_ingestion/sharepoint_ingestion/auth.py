@@ -1,10 +1,20 @@
 """Authentication — acquire a Bearer token from Azure AD via MSAL."""
 
+import os
+
 import msal
 
 
 def get_access_token(tenant_id: str, client_id: str, client_secret: str) -> str:
-    """Return a Bearer token string for the Microsoft Graph API."""
+    """Return a Bearer token string for the Microsoft Graph API.
+
+    If the environment variable 'GRAPH_API_TOKEN' is set, it is returned
+    directly. Otherwise, a new token is acquired via MSAL.
+    """
+    env_token = os.getenv("GRAPH_API_TOKEN")
+    if env_token:
+        return env_token
+
     authority = f"https://login.microsoftonline.com/{tenant_id}"
     app = msal.ConfidentialClientApplication(
         client_id,

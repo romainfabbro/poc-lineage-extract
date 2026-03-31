@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from loguru import logger
+
 from sharepoint_ingestion.auth import get_access_token
 from sharepoint_ingestion.graph import (
     TokenExpiredError,
@@ -44,7 +46,7 @@ def run(spark, params: dict, secrets: dict, dbutils=None) -> None:
     folder_item_id: str | None = params.get("folder_item_id") or None
     raw_ext_filter: str = params.get("file_ext_filter", "")
     file_ext_filter: list[str] | None = (
-        [e.strip() for e in raw_ext_filter.split(",") if e.strip()]
+        [e.strip().lower() for e in raw_ext_filter.split(",") if e.strip()]
         if raw_ext_filter
         else None
     )
@@ -66,11 +68,18 @@ def run(spark, params: dict, secrets: dict, dbutils=None) -> None:
             file_ext_filter,
         )
     except TokenExpiredError:
+        logger.warning(f"Delta token for drive {drive_id} expired. Resetting.")
         write_token(spark, state_table, drive_id, None, "failed")
         raise
 
-    for item in items:
-        content = download_file(item["download_url"])
+    total = len(items)
+    logger.info(
+        f"Found {total} new/modified file(s) to ingest for library '{library_name}'."
+    )
+
+    for i, item in enumerate(items, 1):
+        logger.info(f"[{i}/{total}] Ingesting '{item['name']}' (ID: {item['id']})...")
+        content = download_file(item["download_url"], access_token)
         write_file(
             raw_base_path,
             library_name,
@@ -81,3 +90,4 @@ def run(spark, params: dict, secrets: dict, dbutils=None) -> None:
         )
 
     write_token(spark, state_table, drive_id, new_delta_link, "success")
+    logger.success("Ingestion job completed successfully.")
