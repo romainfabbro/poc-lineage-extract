@@ -44,6 +44,8 @@ resources:
         - name: state_table
           # Replace {catalog} and {schema} — run setup/sp_delta_token.sql first
           default: "{catalog}.{schema}.sp_delta_token"
+        - name: secret_scope
+          default: ""                             # set to your Databricks secret scope name
 
       health:
         rules:
