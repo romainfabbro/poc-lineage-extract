@@ -237,9 +237,9 @@ Revisit Managed Identity when Microsoft improves native support for this pattern
 
 | Secret Name | Description |
 |---|---|
-| `sharepoint-tenant-id` | Azure AD tenant ID |
-| `sharepoint-client-id` | Service principal application ID |
-| `sharepoint-client-secret` | Service principal client secret |
+| `spn-tenant-id` | Azure AD tenant ID |
+| `spn-client-id` | Service principal application ID |
+| `spn-client-secret` | Service principal client secret |
 
 ---
 
