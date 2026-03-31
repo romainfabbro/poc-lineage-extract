@@ -116,7 +116,8 @@ Databricks Job       Delta Lake Table      Key Vault        Graph API         Ra
       │   skip if folder (no item.file)      │                │                  │
       │   skip if extension not in filter    │                │                  │
       │                   │                  │                │                  │
-      │─ (6) GET @microsoft.graph.downloadUrl ────────────────►                  │
+      │─ (6) GET /drives/{drive_id}/items/{item_id}/content ─►                  │
+      │      (Graph API with Authorization: Bearer {token})   │                  │
       │◄─ file binary ────────────────────────────────────────│                  │
       │─ (7) write to raw path ──────────────────────────────────────────────── ►│
       │◄─ confirmed ────────────────────────────────────────────────────────────│ │
