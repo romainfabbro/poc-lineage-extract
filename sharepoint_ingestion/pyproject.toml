@@ -20,7 +20,6 @@ adls = ["adlfs>=2024.2"]
 
 [project.scripts]
 # 'run' kept for backward-compat; 'ingest' is the production Databricks entry point
-run = "sharepoint_ingestion.job:run"
 ingest = "sharepoint_ingestion.entrypoint:main"
 setup-sp = "sharepoint_ingestion.setup_sp:app"
 
