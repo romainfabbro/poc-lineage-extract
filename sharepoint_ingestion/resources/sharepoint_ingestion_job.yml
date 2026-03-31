@@ -36,7 +36,7 @@ resources:
         - name: folder_item_id
           default: ""                             # empty = full library
         - name: raw_base_path
-          default: ""                             # must be a /Volumes/... path
+          default: ""                             # /Volumes/... path or cloud URI (e.g. abfss://...)
         - name: library_name
           default: ""
         - name: file_ext_filter
