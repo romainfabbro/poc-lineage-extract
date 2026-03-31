@@ -325,8 +325,8 @@ GET /delta (or /delta?token=...)
 | **429 — throttled** | Respect `Retry-After` header, retry up to 3 times |
 | **410 — token expired** | Reset `delta_link = NULL`, alert Datadog, recover on next scheduled run |
 | **401 — auth failure** | Fail immediately, alert Datadog — Key Vault access or SP permission issue |
-| **File download failure** | Log error, skip file, continue. Token not committed → file reappears on next delta call. |
-| **Raw layer write failure** | Same as above |
+| **File download failure** | Fail the job immediately on first download error, log and alert. `delta_link` not committed → same items are retried on next run. |
+| **Raw layer write failure** | Same as above: fail-fast, log and alert, do not commit `delta_link`. |
 | **Full job failure** | `delta_link` not updated → next run replays automatically from last valid token |
 
 ---
