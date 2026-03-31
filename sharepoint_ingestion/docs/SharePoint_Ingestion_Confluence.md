@@ -132,7 +132,7 @@ Logic Apps are **not part of the current platform stack**. Introducing them woul
 
 ### Option D — Databricks Job (Daily Scheduled)
 
-**Description:** A Databricks job runs on a daily schedule, calls the Microsoft Graph API delta endpoint to detect changes, manages deltaLink state in Azure SQL, downloads new/modified files, and writes them to ADLS Gen2 raw zone.
+**Description:** A Databricks job runs on a daily schedule, calls the Microsoft Graph API delta endpoint to detect changes, manages deltaLink state in a Delta Lake table (`sp_delta_token`) via Spark, downloads new/modified files, and writes them to ADLS Gen2 raw zone.
 
 **Strengths:**
 - Databricks is the **primary platform** — no new technology introduced
