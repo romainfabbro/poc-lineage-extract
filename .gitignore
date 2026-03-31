@@ -11,3 +11,8 @@ wheels/
 
 data/
 logs/
+
+# Test / coverage artifacts
+.coverage
+htmlcov/
+.pytest_cache/
