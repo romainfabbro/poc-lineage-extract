@@ -8,38 +8,36 @@ from sharepoint_ingestion.auth import get_access_token
 class TestGetAccessToken:
     def test_returns_env_token_if_set(self, mocker):
         mocker.patch("sharepoint_ingestion.auth.os.getenv", return_value="env-tok-123")
-        mock_msal = mocker.patch("sharepoint_ingestion.auth.msal.ConfidentialClientApplication")
+        mock_post = mocker.patch("sharepoint_ingestion.auth.requests.post")
 
         token = get_access_token("tid", "cid", "sec")
 
         assert token == "env-tok-123"
-        mock_msal.assert_not_called()
+        mock_post.assert_not_called()
 
     def test_returns_token_on_success(self, mocker):
-        mock_app = mocker.MagicMock()
-        mock_app.acquire_token_for_client.return_value = {"access_token": "tok123"}
-        mocker.patch(
-            "sharepoint_ingestion.auth.msal.ConfidentialClientApplication",
-            return_value=mock_app,
-        )
+        mocker.patch("sharepoint_ingestion.auth.os.getenv", return_value=None)
+        mock_post = mocker.patch("sharepoint_ingestion.auth.requests.post")
+        mock_post.return_value.json.return_value = {"access_token": "tok123"}
 
         token = get_access_token("tenant-id", "client-id", "client-secret")
 
         assert token == "tok123"
-        mock_app.acquire_token_for_client.assert_called_once_with(
-            scopes=["https://graph.microsoft.com/.default"]
+        mock_post.assert_called_once_with(
+            "https://login.microsoftonline.com/tenant-id/oauth2/v2.0/token",
+            data={
+                "grant_type": "client_credentials",
+                "client_id": "client-id",
+                "client_secret": "client-secret",
+                "scope": "https://graph.microsoft.com/.default",
+            },
+            timeout=30,
         )
 
-    def test_raises_on_msal_error(self, mocker):
-        mock_app = mocker.MagicMock()
-        mock_app.acquire_token_for_client.return_value = {
-            "error": "invalid_client",
-            "error_description": "bad credentials",
-        }
-        mocker.patch(
-            "sharepoint_ingestion.auth.msal.ConfidentialClientApplication",
-            return_value=mock_app,
-        )
+    def test_raises_on_http_error(self, mocker):
+        mocker.patch("sharepoint_ingestion.auth.os.getenv", return_value=None)
+        mock_post = mocker.patch("sharepoint_ingestion.auth.requests.post")
+        mock_post.return_value.raise_for_status.side_effect = Exception("401 Unauthorized")
 
-        with pytest.raises(RuntimeError, match="MSAL token acquisition failed"):
-            get_access_token("tenant-id", "client-id", "client-secret")
+        with pytest.raises(Exception, match="401 Unauthorized"):
+            get_access_token("tenant-id", "client-id", "bad-secret")

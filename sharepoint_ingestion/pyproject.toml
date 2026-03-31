@@ -7,10 +7,10 @@ name = "sharepoint_ingestion"
 version = "1.0.0"
 requires-python = ">=3.10"
 dependencies = [
-    "msal>=1.28",
     "requests>=2.31",
     "fsspec>=2023.6",
     "loguru>=0.7",
+    "typer>=0.12",
 ]
 
 [project.optional-dependencies]
@@ -22,6 +22,7 @@ adls = ["adlfs>=2024.2"]
 # 'run' kept for backward-compat; 'ingest' is the production Databricks entry point
 run = "sharepoint_ingestion.job:run"
 ingest = "sharepoint_ingestion.entrypoint:main"
+setup-sp = "sharepoint_ingestion.setup_sp:app"
 
 [tool.setuptools.packages.find]
 include = ["sharepoint_ingestion*"]
@@ -44,7 +45,10 @@ addopts = "--cov=sharepoint_ingestion --cov-report=term-missing --cov-fail-under
 [tool.coverage.run]
 source = ["sharepoint_ingestion"]
 branch = true
-omit = ["sharepoint_ingestion/entrypoint.py"]  # Databricks-only; untestable without runtime
+omit = [
+    "sharepoint_ingestion/entrypoint.py",  # Databricks-only; untestable without runtime
+    "sharepoint_ingestion/setup_sp.py",    # setup utility; requires live Graph API
+]
 
 [tool.coverage.report]
 fail_under = 100
