@@ -66,14 +66,15 @@ The pipeline is **read-only on SharePoint** and **append-only on the raw layer**
 │   ADLS Gen2)         │   │  abfss://{container}@{account}      │
 │                      │   │  .dfs.core.windows.net/raw/         │
 │  sp_delta_token      │   │  sharepoint/{library}/              │
-│  (1 row per library) │   │  {yyyy}/{mm}/{dd}/{file_id}_{name}  │
-│                      │   │                                     │
-│  drive_id            │   │  — or —                             │
-│  delta_link          │   │                                     │
-│  updated_at          │   │  /Volumes/{catalog}/{schema}/       │
-│  last_status         │   │  {volume}/raw/sharepoint/           │
-└──────────────────────┘   │  {library}/{yyyy}/{mm}/{dd}/        │
-                           │  {file_id}_{name}                   │
+│  (1 row per library) │   │  ingest_date={yyyy}-{mm}-{dd}/      │
+│                      │   │  {file_id}_{name}                   │
+│  drive_id            │   │                                     │
+│  delta_link          │   │  — or —                             │
+│  updated_at          │   │                                     │
+│  last_status         │   │  /Volumes/{catalog}/{schema}/       │
+└──────────────────────┘   │  {volume}/raw/sharepoint/           │
+                           │  {library}/ingest_date={yyyy}-      │
+                           │  {mm}-{dd}/{file_id}_{name}         │
                            └─────────────────────────────────────┘
 ```
 
@@ -245,23 +246,23 @@ Revisit Managed Identity when Microsoft improves native support for this pattern
 ## 5. Raw Layer Path Convention
 
 ```
-{raw_base_path}/{library_name}/{yyyy}/{mm}/{dd}/{file_id}_{file_name}
+{raw_base_path}/{library_name}/ingest_date={yyyy}-{mm}-{dd}/{file_id}_{file_name}
 ```
 
 **abfss example:**
 ```
-abfss://datalake@mystorageaccount.dfs.core.windows.net/raw/sharepoint/finance-reports/2026/03/29/01ABCDEF_Q1_Report.xlsx
+abfss://datalake@mystorageaccount.dfs.core.windows.net/raw/sharepoint/finance-reports/ingest_date=2026-03-29/01ABCDEF_Q1_Report.xlsx
 ```
 
 **Unity Catalog Volume example:**
 ```
-/Volumes/platform/raw/landing/raw/sharepoint/finance-reports/2026/03/29/01ABCDEF_Q1_Report.xlsx
+/Volumes/platform/raw/landing/raw/sharepoint/finance-reports/ingest_date=2026-03-29/01ABCDEF_Q1_Report.xlsx
 ```
 
 | Segment | Source | Purpose |
 |---|---|---|
 | `{library_name}` | Job parameter | Namespaces files by SharePoint library |
-| `{yyyy}/{mm}/{dd}` | Job run date (UTC) | Date hierarchy for downstream partitioning |
+| `ingest_date={yyyy}-{mm}-{dd}` | Job run date (UTC) | Hive-style partitioning for automatic Spark column discovery |
 | `{file_id}_` | Graph API `item.id` | Guarantees uniqueness if file is renamed |
 | `{file_name}` | Graph API `item.name` | Human-readable, preserves file extension |
 

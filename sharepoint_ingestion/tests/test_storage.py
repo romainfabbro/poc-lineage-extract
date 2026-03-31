@@ -93,42 +93,36 @@ class TestWriteFilePosix:
 
         with patch("sharepoint_ingestion.storage.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.side_effect = lambda fmt: {
-                "%Y": "2024",
-                "%m": "03",
-                "%d": "15",
+                "%Y-%m-%d": "2024-03-15",
             }[fmt]
             path = write_file(
                 str(tmp_path), "finance", "FILEID01", "report.xlsx", content
             )
 
         expected = str(
-            tmp_path / "finance" / "2024" / "03" / "15" / "FILEID01_report.xlsx"
+            tmp_path / "finance" / "ingest_date=2024-03-15" / "FILEID01_report.xlsx"
         )
         assert path == expected
 
     def test_returns_full_path(self, tmp_path):
         with patch("sharepoint_ingestion.storage.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.side_effect = lambda fmt: {
-                "%Y": "2024",
-                "%m": "01",
-                "%d": "01",
+                "%Y-%m-%d": "2024-01-01",
             }[fmt]
             result = write_file(str(tmp_path), "lib", "ID1", "file.csv", b"data")
 
-        assert result == str(tmp_path / "lib" / "2024" / "01" / "01" / "ID1_file.csv")
+        assert result == str(tmp_path / "lib" / "ingest_date=2024-01-01" / "ID1_file.csv")
 
     def test_file_content_is_written(self, tmp_path):
         content = b"actual content"
 
         with patch("sharepoint_ingestion.storage.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.side_effect = lambda fmt: {
-                "%Y": "2024",
-                "%m": "06",
-                "%d": "20",
+                "%Y-%m-%d": "2024-06-20",
             }[fmt]
             write_file(str(tmp_path), "lib", "ID2", "data.csv", content)
 
-        written = tmp_path / "lib" / "2024" / "06" / "20" / "ID2_data.csv"
+        written = tmp_path / "lib" / "ingest_date=2024-06-20" / "ID2_data.csv"
         assert written.read_bytes() == content
 
     def test_raises_on_relative_path(self):
@@ -140,12 +134,10 @@ class TestWriteFilePosix:
 
 
 class TestWriteFileAdls:
-    def _mock_date(self, mocker, yyyy="2024", mm="03", dd="15"):
+    def _mock_date(self, mocker, date_str="2024-03-15"):
         mock_dt = mocker.patch("sharepoint_ingestion.storage.datetime")
         mock_dt.now.return_value.strftime.side_effect = lambda fmt: {
-            "%Y": yyyy,
-            "%m": mm,
-            "%d": dd,
+            "%Y-%m-%d": date_str,
         }[fmt]
 
     def _make_dbutils(self):
@@ -161,7 +153,7 @@ class TestWriteFileAdls:
 
         write_file(ADLS_BASE, "finance", "ID1", "report.xlsx", b"bytes", dbutils=dbutils)
 
-        expected_dest = f"{ADLS_BASE}/finance/2024/03/15/ID1_report.xlsx"
+        expected_dest = f"{ADLS_BASE}/finance/ingest_date=2024-03-15/ID1_report.xlsx"
         src, dest = dbutils.fs.cp.call_args[0]
         assert src.startswith("file://")
         assert dest == expected_dest
@@ -174,7 +166,7 @@ class TestWriteFileAdls:
             ADLS_BASE, "finance", "ID1", "report.xlsx", b"bytes", dbutils=dbutils
         )
 
-        assert result == f"{ADLS_BASE}/finance/2024/03/15/ID1_report.xlsx"
+        assert result == f"{ADLS_BASE}/finance/ingest_date=2024-03-15/ID1_report.xlsx"
 
     def test_strips_trailing_slash_from_base(self, mocker):
         self._mock_date(mocker)

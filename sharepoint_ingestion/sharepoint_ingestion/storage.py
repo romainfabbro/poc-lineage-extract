@@ -82,9 +82,8 @@ def write_file(
     Any other base_path format raises ``ValueError``.
     """
     now = datetime.now(timezone.utc)
-    yyyy = now.strftime("%Y")
-    mm = now.strftime("%m")
-    dd = now.strftime("%d")
+    date_str = now.strftime("%Y-%m-%d")
+    partition_segment = f"ingest_date={date_str}"
     file_segment = f"{file_id}_{file_name}"
 
     if "://" in base_path:
@@ -93,7 +92,7 @@ def write_file(
                 "dbutils must be provided when base_path is a cloud URI"
             )
         path = "/".join(
-            [base_path.rstrip("/"), library_name, yyyy, mm, dd, file_segment]
+            [base_path.rstrip("/"), library_name, partition_segment, file_segment]
         )
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             tmp.write(content)
@@ -104,7 +103,7 @@ def write_file(
             os.unlink(local_path)
     elif base_path.startswith("/"):
         # POSIX path — UC Volume or local filesystem
-        p = Path(base_path) / library_name / yyyy / mm / dd / file_segment
+        p = Path(base_path) / library_name / partition_segment / file_segment
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(content)
         path = str(p)

@@ -56,7 +56,7 @@ Read by `drive_id`. Written only on full job success. Never written on failure â
 ### Raw Layer Path
 
 ```
-{raw_base_path}/{library_name}/{yyyy}/{mm}/{dd}/{file_id}_{file_name}
+{raw_base_path}/{library_name}/ingest_date={yyyy}-{mm}-{dd}/{file_id}_{file_name}
 ```
 
 `file_id` is the Graph API item ID â€” guarantees uniqueness even if the file is renamed.

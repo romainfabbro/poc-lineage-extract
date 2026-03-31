@@ -58,7 +58,7 @@ The platform is actively consolidating onto **Databricks as the primary compute 
 ### Functional
 
 - Detect new and modified files in a SharePoint Online document library
-- Copy files to ADLS Gen2 raw zone (path: `/raw/sharepoint/{library}/{year}/{month}/{day}/`)
+- Copy files to ADLS Gen2 raw zone (path: `/raw/sharepoint/{library}/ingest_date={year}-{month}-{day}/`)
 - Maintain incremental state — do not re-ingest files already processed
 - Support manual full reload when required
 
@@ -214,7 +214,7 @@ Logic Apps are **not part of the current platform stack**. Introducing them woul
 ┌──────────────┐   ┌─────────────────────────────┐
 │  Azure SQL   │   │  ADLS Gen2 — Raw Zone        │
 │  State table │   │  /raw/sharepoint/{lib}/      │
-│  (deltaLink) │   │  {year}/{month}/{day}/       │
+│  (deltaLink) │   │  ingest_date={yyyy}-{mm}-{dd}/
 └──────────────┘   └──────────────┬──────────────┘
                                   │
                                   ▼
@@ -318,10 +318,10 @@ emit_metrics(files_ingested, files_skipped, errors, duration)
 ### 6.5 ADLS Raw Zone Path Convention
 
 ```
-/raw/sharepoint/{library_name}/{year}/{month}/{day}/{file_id}_{file_name}
+/raw/sharepoint/{library_name}/ingest_date={year}-{month}-{day}/{file_id}_{file_name}
 
 Example:
-/raw/sharepoint/finance-reports/2026/03/29/01ABCD_Q1_Report.xlsx
+/raw/sharepoint/finance-reports/ingest_date=2026-03-29/01ABCD_Q1_Report.xlsx
 ```
 
 The `file_id` prefix ensures uniqueness if a file is renamed between runs.
