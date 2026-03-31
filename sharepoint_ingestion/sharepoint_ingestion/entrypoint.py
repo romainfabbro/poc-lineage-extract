@@ -20,15 +20,16 @@ def main() -> None:  # pragma: no cover
     spark = SparkSession.getActiveSession()
     dbutils = DBUtils(spark)
 
+    state_table_widget_value = dbutils.widgets.get("state_table")
+    state_table = state_table_widget_value or "_sharepoint_state_ingestion"
+
     params = {
         "drive_id": dbutils.widgets.get("drive_id"),
         "folder_item_id": dbutils.widgets.get("folder_item_id"),
         "raw_base_path": dbutils.widgets.get("raw_base_path"),
         "library_name": dbutils.widgets.get("library_name"),
         "file_ext_filter": dbutils.widgets.get("file_ext_filter"),
-        "state_table": dbutils.widgets.get(
-            "state_table", "_sharepoint_state_ingestion"
-        ),
+        "state_table": state_table,
     }
 
     secret_scope = dbutils.widgets.get("secret_scope")
