@@ -19,7 +19,8 @@ ADLS_BASE = "abfss://container@account.dfs.core.windows.net"
 class TestReadToken:
     def test_returns_none_when_no_row(self):
         spark = MagicMock()
-        chain = spark.sql.return_value.filter.return_value.limit.return_value
+        df = spark.table.return_value
+        chain = df.filter.return_value.limit.return_value
         chain.collect.return_value = []
 
         result = read_token(spark, TABLE, DRIVE_ID)
@@ -30,7 +31,8 @@ class TestReadToken:
         mock_row = MagicMock()
         mock_row.delta_link = DELTA_LINK
         spark = MagicMock()
-        chain = spark.sql.return_value.filter.return_value.limit.return_value
+        df = spark.table.return_value
+        chain = df.filter.return_value.limit.return_value
         chain.collect.return_value = [mock_row]
 
         result = read_token(spark, TABLE, DRIVE_ID)

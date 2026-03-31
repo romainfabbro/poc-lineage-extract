@@ -21,9 +21,9 @@ def _validate_drive_id(drive_id: str) -> None:
 def read_token(spark, table: str, drive_id: str) -> str | None:
     """Return the stored delta_link for drive_id, or None if no row exists."""
     _validate_drive_id(drive_id)
+    df = spark.table(table)
     rows = (
-        spark.sql(f"SELECT * FROM {table}")
-        .filter(f"drive_id = '{drive_id}'")
+        df.filter(df["drive_id"] == drive_id)
         .limit(1)
         .collect()
     )
