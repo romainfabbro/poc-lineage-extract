@@ -26,10 +26,12 @@ def main() -> None:  # pragma: no cover
         "raw_base_path": dbutils.widgets.get("raw_base_path"),
         "library_name": dbutils.widgets.get("library_name"),
         "file_ext_filter": dbutils.widgets.get("file_ext_filter"),
-        "state_table": dbutils.widgets.get("state_table"),
+        "state_table": dbutils.widgets.get(
+            "state_table", "_sharepoint_state_ingestion"
+        ),
     }
 
-    secret_scope = "sharepoint"
+    secret_scope = dbutils.widgets.get("secret_scope")
     secrets = {
         "spn-tenant-id": dbutils.secrets.get(secret_scope, "spn-tenant-id"),
         "spn-client-id": dbutils.secrets.get(secret_scope, "spn-client-id"),
