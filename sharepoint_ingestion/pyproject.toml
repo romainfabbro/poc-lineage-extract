@@ -8,16 +8,9 @@ version = "1.0.0"
 requires-python = ">=3.10"
 dependencies = [
     "requests>=2.31",
-    "fsspec>=2023.6",
     "loguru>=0.7",
     "typer>=0.12",
 ]
-
-[project.optional-dependencies]
-# Install when writing to Azure Data Lake Storage Gen2 (abfss:// paths):
-#   pip install sharepoint_ingestion[adls]
-adls = ["adlfs>=2024.2"]
-
 [project.scripts]
 # 'run' kept for backward-compat; 'ingest' is the production Databricks entry point
 ingest = "sharepoint_ingestion.entrypoint:main"
