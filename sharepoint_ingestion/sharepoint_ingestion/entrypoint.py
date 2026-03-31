@@ -17,7 +17,7 @@ def main() -> None:  # pragma: no cover
 
     from sharepoint_ingestion.job import run
 
-    spark = SparkSession.getActiveSession()
+    spark = SparkSession.builder.getOrCreate()
     dbutils = DBUtils(spark)
 
     state_table_widget_value = dbutils.widgets.get("state_table")
