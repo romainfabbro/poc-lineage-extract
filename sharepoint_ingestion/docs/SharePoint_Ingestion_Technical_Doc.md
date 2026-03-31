@@ -26,7 +26,7 @@ This pipeline ingests **new and modified files** from a scoped SharePoint Online
 
 Change detection is handled entirely by the **Microsoft Graph API delta endpoint**, which returns only items modified since the last run via a persisted `deltaLink` token stored in a **Delta Lake table** inside the platform.
 
-The pipeline is **read-only on SharePoint** and **append-only on the raw layer**.
+The pipeline is **read-only on SharePoint** and **idempotent on the raw layer**: files are written to deterministic `{file_id}_{file_name}` paths, so reprocessing the same SharePoint item overwrites its previous raw object but does not delete or mutate other files.
 
 ---
 
