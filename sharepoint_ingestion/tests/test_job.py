@@ -29,7 +29,7 @@ FILE_ITEM = {
     "id": "FILEID01",
     "name": "report.xlsx",
     "file": {},
-    "@microsoft.graph.downloadUrl": "https://dl.example.com/report.xlsx",
+    "download_url": "https://dl.example.com/report.xlsx",
 }
 
 
@@ -50,7 +50,7 @@ class TestRunHappyPath:
         run(spark, PARAMS, SECRETS)
 
         mock_write_file.assert_called_once_with(
-            "/mnt/raw", "finance", "FILEID01", "report.xlsx", b"bytes", None
+            "/mnt/raw", "finance", "FILEID01", "report.xlsx", b"bytes", dbutils=None
         )
         mock_write_token.assert_called_once_with(
             spark,
@@ -102,9 +102,10 @@ class TestRunHappyPath:
 
         assert mock_fetch.call_args[0][4] is None
 
-    def test_cloud_path_passes_storage_options_from_secrets(self, spark, mocker):
+    def test_cloud_path_passes_dbutils(self, spark, mocker):
         adls_base = "abfss://container@account.dfs.core.windows.net"
         params = {**PARAMS, "raw_base_path": adls_base}
+        mock_dbutils = mocker.MagicMock()
         mocker.patch("sharepoint_ingestion.job.get_access_token", return_value="tok")
         mocker.patch("sharepoint_ingestion.job.read_token", return_value=None)
         mocker.patch(
@@ -115,7 +116,7 @@ class TestRunHappyPath:
         mock_write_file = mocker.patch("sharepoint_ingestion.job.write_file")
         mocker.patch("sharepoint_ingestion.job.write_token")
 
-        run(spark, params, SECRETS)
+        run(spark, params, SECRETS, dbutils=mock_dbutils)
 
         mock_write_file.assert_called_once_with(
             adls_base,
@@ -123,11 +124,7 @@ class TestRunHappyPath:
             "FILEID01",
             "report.xlsx",
             b"bytes",
-            {
-                "tenant_id": "tenant-id",
-                "client_id": "client-id",
-                "client_secret": "client-secret",
-            },
+            dbutils=mock_dbutils,
         )
 
     def test_no_folder_item_passes_none(self, spark, mocker):

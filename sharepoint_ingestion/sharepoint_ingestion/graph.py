@@ -24,6 +24,9 @@ def fetch_delta_changes(
     """Return (filtered_items, new_delta_link) by paginating the delta endpoint."""
     headers = {"Authorization": f"Bearer {access_token}"}
 
+    # The delta endpoint returns only changes since the last sync token, avoiding
+    # a full library scan on every run. On first call (no token) it returns all items
+    # and issues a token; subsequent calls resume from where the previous run left off.
     if delta_link:
         url: str | None = delta_link
     elif folder_item_id:
@@ -48,6 +51,11 @@ def fetch_delta_changes(
                 ext = "." + name.rsplit(".", 1)[-1] if "." in name else ""
                 if ext.lower() not in file_ext_filter:
                     continue
+
+            
+            item["download_url"] = (
+                f"{_GRAPH_BASE}/drives/{drive_id}/items/{item['id']}/content"
+            )
             collected.append(item)
 
         if "@odata.deltaLink" in data:

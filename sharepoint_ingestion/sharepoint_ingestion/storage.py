@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import re
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-
-import fsspec
 
 # Graph API drive IDs are URL-safe base64 strings with an optional '!' prefix
 # (e.g. "b!xYz123-abc_def"). Reject anything containing SQL special characters.
@@ -61,28 +61,23 @@ def write_file(
     file_id: str,
     file_name: str,
     content: bytes,
-    storage_options: dict | None = None,
+    dbutils=None,
 ) -> str:
     """Write bytes to the raw layer and return the full path written.
 
     Two backends are supported based on the base_path scheme:
 
     - UC Volume (POSIX path, e.g. ``/Volumes/catalog/schema/volume``):
-      Written via standard Python file I/O using pathlib. ``storage_options``
-      is ignored.  UC Volumes are mounted as POSIX paths on Databricks clusters.
+      Written via standard Python file I/O using pathlib.  UC Volumes are
+      mounted as POSIX paths on Databricks clusters — no credentials needed.
 
-    - Azure Data Lake Storage Gen2 (``abfss://container@account.dfs.core.windows.net``):
-      Written via ``fsspec`` + ``adlfs``.  Pass ``storage_options`` with service
-      principal credentials::
+    - Cloud URI (e.g. ``abfss://container@account.dfs.core.windows.net``):
+      Pass the Databricks ``dbutils`` object.  The file is staged in a local
+      temp file and copied via ``dbutils.fs.cp()``, which uses the cluster's
+      ambient credentials (managed identity, instance profile, UC external
+      location)::
 
-          storage_options = {
-              "tenant_id": "...",
-              "client_id": "...",
-              "client_secret": "...",
-          }
-
-      Install the optional extra to enable ADLS support:
-      ``pip install sharepoint_ingestion[adls]``
+          write_file(base_path, ..., dbutils=dbutils)
 
     Any other base_path format raises ``ValueError``.
     """
@@ -93,12 +88,20 @@ def write_file(
     file_segment = f"{file_id}_{file_name}"
 
     if "://" in base_path:
-        # Cloud path — delegate to fsspec (adlfs for abfss://, etc.)
+        if dbutils is None:
+            raise ValueError(
+                "dbutils must be provided when base_path is a cloud URI"
+            )
         path = "/".join(
             [base_path.rstrip("/"), library_name, yyyy, mm, dd, file_segment]
         )
-        with fsspec.open(path, "wb", **(storage_options or {})) as fh:
-            fh.write(content)
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(content)
+            local_path = tmp.name
+        try:
+            dbutils.fs.cp(f"file://{local_path}", path)
+        finally:
+            os.unlink(local_path)
     elif base_path.startswith("/"):
         # POSIX path — UC Volume or local filesystem
         p = Path(base_path) / library_name / yyyy / mm / dd / file_segment

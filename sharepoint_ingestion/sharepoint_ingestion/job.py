@@ -19,11 +19,15 @@ def _validate_params(params: dict) -> None:
             raise ValueError(f"Missing required job parameter: '{key}'")
 
 
-def run(spark, params: dict, secrets: dict) -> None:
+def run(spark, params: dict, secrets: dict, dbutils=None) -> None:
     """Full pipeline: read token → fetch changes → write files → commit token.
 
     Raises on any unrecoverable error — does NOT commit token on partial failure.
     On 410 (token expired), resets the stored token to NULL and raises.
+
+    Pass ``dbutils`` when ``raw_base_path`` is a cloud URI (``abfss://...``).
+    The cluster's ambient credentials are used — no explicit SPN config needed.
+    For POSIX paths (UC Volumes) ``dbutils`` can be omitted.
 
     Partial-failure note: if a file download raises mid-loop, files already
     written in this run are persisted at their deterministic paths
@@ -51,18 +55,6 @@ def run(spark, params: dict, secrets: dict) -> None:
         secrets["spn-client-secret"],
     )
 
-    # For cloud URIs (abfss://...) authenticate with the same SPN used for
-    # SharePoint.  For POSIX paths (UC Volumes) no credentials are needed.
-    storage_options: dict | None = (
-        {
-            "tenant_id": secrets["spn-tenant-id"],
-            "client_id": secrets["spn-client-id"],
-            "client_secret": secrets["spn-client-secret"],
-        }
-        if "://" in raw_base_path
-        else None
-    )
-
     delta_link = read_token(spark, state_table, drive_id)
 
     try:
@@ -78,14 +70,14 @@ def run(spark, params: dict, secrets: dict) -> None:
         raise
 
     for item in items:
-        content = download_file(item["@microsoft.graph.downloadUrl"])
+        content = download_file(item["download_url"])
         write_file(
             raw_base_path,
             library_name,
             item["id"],
             item["name"],
             content,
-            storage_options,
+            dbutils=dbutils,
         )
 
     write_token(spark, state_table, drive_id, new_delta_link, "success")
